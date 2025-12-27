@@ -121,7 +121,7 @@ services:
 
   
   core_api:
-    build: ./services/core_api
+    build: ./backend/services/core_api
     container_name: core_api
     env_file: .env
     depends_on:
