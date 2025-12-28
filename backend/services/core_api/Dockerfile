@@ -10,6 +10,8 @@ RUN apt-get update \
 
 RUN pip install "poetry==$POETRY_VERSION"
 
+RUN poetry self update
+
 WORKDIR /core_api
 
 COPY pyproject.toml poetry.lock ./

@@ -58,9 +58,6 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     volumes:
       - ./volumes/rabbitmq:/var/lib/rabbitmq
     networks:
@@ -70,6 +67,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+    env_file:
+      - .env
 
 
   redis:
@@ -145,17 +144,32 @@ services:
     networks:
       - app_network
 
-  # ai_worker:
-  #   build: ./services/ai_worker
-  #   container_name: ai_worker
-  #   env_file: .env
-  #   depends_on:
-  #     rabbitmq:
-  #       condition: service_healthy
-  #     milvus:
-  #       condition: service_started
-  #   networks:
-  #     - app_network
+  ai_worker:
+    build: ./backend/services/ai_worker
+    container_name: ai_worker
+    env_file: .env
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      milvus:
+        condition: service_started
+    networks:
+      - app_network
+
+  flower:
+    image: mher/flower:2.0
+    container_name: flower
+    environment:
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:${RABBITMQ_PORT}/
+      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST}:${REDIS_PORT}/${REDIS_AI_DB}
+    ports:
+      - "5555:5555"
+    depends_on:
+      - rabbitmq
+      - redis
+      - ai_worker
+    networks:
+      - app_network
 
 networks:
   app_network:

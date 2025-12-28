@@ -1,14 +1,15 @@
 from fastapi import FastAPI
 from src.routers import notes
 from contextlib import asynccontextmanager
-# from src.rabbit import rabbit_client
+from src.rabbit import rabbit
+from src.config import settings
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # await rabbit_client.connect()
+    await rabbit.connect()
     yield
-    # await rabbit_client.close()
+    await rabbit.close()
 
 app = FastAPI(lifespan=lifespan)
 
