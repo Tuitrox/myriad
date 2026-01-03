@@ -65,7 +65,7 @@
         PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
         PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
         
-        SCRIPT_NAME: /pgadmin
+        SCRIPT_NAME: ${ROOT_PATH}/pgadmin
       
       volumes:
         - ./volumes/pgadmin:/var/lib/pgadmin
