@@ -17,7 +17,8 @@ aio-pika = "^9.4.0"
 redis = "^5.0.1"
 python-multipart = "^0.0.9"
 celery = "^5.6.0"
-passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+pydantic = {extras = ["email"], version = "^2.12.5"}
+bcrypt = "^5.0.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.1.1"
