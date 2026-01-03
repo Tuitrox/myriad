@@ -1,9 +1,18 @@
-from fastapi import APIRouter
-from src.celery_app import send_task as celery_send_task
+from fastapi import APIRouter, Depends
 
-router = APIRouter(prefix="/api/notes", tags=["Notes"])
+from src.celery_app import send_task as celery_send_task
+from src.models import User
+from src.routers.auth import get_current_user
+
+
+router = APIRouter(prefix="/notes", tags=["Notes"])
 
 
 @router.get("/")
-async def create_note():  
-    return await celery_send_task("src.tasks.do_something", ["my text its realy works! wow"])
+async def create_note(user: User = Depends(get_current_user)):
+    task_msg = await celery_send_task("src.tasks.do_something", ["my text its realy works! wow"])\
+    
+    task_msg.update({"user_id": user.id, "user_email": user.email})
+
+    return task_msg
+

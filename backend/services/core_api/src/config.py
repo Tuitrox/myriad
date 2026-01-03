@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     REDIS_AI_DB: str = "1"
     REDIS_PORT: int = 5672
 
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
     @property
     def DATABASE_URL(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_CORE_DB_USER}:{self.POSTGRES_CORE_DB_PASS}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
