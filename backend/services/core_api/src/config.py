@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     MODE: str = "DEV"
     
     PROJECT_NAME: str = "Myriad Notes"
+    ROOT_PATH: str = ""
     
     # PostgreSQL
     POSTGRES_CORE_DB_USER: str

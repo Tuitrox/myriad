@@ -14,7 +14,11 @@ async def lifespan(app: FastAPI):
     await rabbit.close()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    root_path=settings.ROOT_PATH,
+    lifespan=lifespan
+    )
 
 app.add_middleware(
     CORSMiddleware,
