@@ -208,6 +208,21 @@
         - "traefik.http.routers.flower.middlewares=flower-strip"
         - "traefik.http.services.flower.loadbalancer.server.port=5555"
 
+    frontend:
+      image: nginx:alpine
+      container_name: frontend
+      restart: always
+      volumes:
+        - ./frontend:/usr/share/nginx/html
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.frontend.rule=Host(`localhost`)" 
+        - "traefik.http.routers.frontend.entrypoints=web"
+        
+        - "traefik.http.services.frontend.loadbalancer.server.port=80"
+      networks:
+        - app_network
+
   networks:
     app_network:
       driver: bridge

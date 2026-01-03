@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Myriad Notes MVP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { padding: 20px; background-color: #f8f9fa; }
+        .container { max-width: 500px; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 class="text-center mb-4">📝 Myriad Notes</h2>
+
+    <div id="login-block">
+        <h4>Вход</h4>
+        <div class="mb-3">
+            <input type="email" id="email" class="form-control" placeholder="Email" value="admin@tuitrox.ru">
+        </div>
+        <div class="mb-3">
+            <input type="password" id="password" class="form-control" placeholder="Пароль">
+        </div>
+        <button onclick="login()" class="btn btn-primary w-100">Войти</button>
+        <div id="login-error" class="text-danger mt-2"></div>
+    </div>
+
+    <div id="app-block" class="hidden">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5>Привет, <span id="user-email"></span>!</h5>
+            <button onclick="logout()" class="btn btn-sm btn-outline-danger">Выйти</button>
+        </div>
+
+        <div class="mb-3">
+            <textarea id="note-text" class="form-control" rows="3" placeholder="О чем думаешь? (например: лейс с крабом 10/10)"></textarea>
+        </div>
+        <button onclick="sendNote()" class="btn btn-success w-100">Отправить заметку 🚀</button>
+        
+        <div id="result-message" class="mt-3 text-success"></div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "/api";
+
+    checkAuth();
+
+    function checkAuth() {
+        const token = localStorage.getItem("access_token");
+        if (token) {
+            document.getElementById("login-block").classList.add("hidden");
+            document.getElementById("app-block").classList.remove("hidden");
+            document.getElementById("user-email").innerText = "User";
+        } else {
+            document.getElementById("login-block").classList.remove("hidden");
+            document.getElementById("app-block").classList.add("hidden");
+        }
+    }
+
+    async function login() {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        const formData = new URLSearchParams();
+        formData.append("username", email);
+        formData.append("password", password);
+
+        try {
+            const response = await fetch(`${API_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: formData
+            });
+
+            if (!response.ok) throw new Error("Неверный логин или пароль");
+
+            const data = await response.json();
+            
+            localStorage.setItem("access_token", data.access_token);
+            
+            checkAuth();
+        } catch (error) {
+            document.getElementById("login-error").innerText = error.message;
+        }
+    }
+
+    async function sendNote() {
+        const text = document.getElementById("note-text").value;
+        const token = localStorage.getItem("access_token");
+
+        try {
+            const response = await fetch(`${API_URL}/notes/?text=${encodeURIComponent(text)}`, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}` 
+                },
+            });
+
+            if (response.status === 401) {
+                logout();
+                return;
+            }
+
+            const result = await response.json();
+            document.getElementById("result-message").innerText = `Готово! Твой логин: ${result.user_email || 'OK'}`;
+            document.getElementById("note-text").value = "";
+        } catch (error) {
+            alert("Ошибка: " + error.message);
+        }
+    }
+
+    function logout() {
+        localStorage.removeItem("access_token");
+        checkAuth();
+    }
+</script>
+
+</body>
+</html>

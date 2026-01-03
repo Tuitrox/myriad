@@ -1,6 +1,8 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from src.routers import notes, auth
 from contextlib import asynccontextmanager
+
 from src.rabbit import rabbit
 from src.config import settings
 
@@ -11,7 +13,16 @@ async def lifespan(app: FastAPI):
     yield
     await rabbit.close()
 
+
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(notes.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
