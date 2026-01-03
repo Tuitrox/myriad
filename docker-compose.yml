@@ -66,18 +66,19 @@
         PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
         
         SCRIPT_NAME: ${ROOT_PATH}/pgadmin
-      
+    
       volumes:
         - ./volumes/pgadmin:/var/lib/pgadmin
-      
       networks:
         - app_network
-      
       labels:
         - "traefik.enable=true"
-        
+
+        - "traefik.http.middlewares.add_root_path.addprefix.prefix=${ROOT_PATH:-/}"
         - "traefik.http.routers.pgadmin.rule=Host(`${DOMAIN_NAME:-localhost}`) && PathPrefix(`/pgadmin`)"
         - "traefik.http.routers.pgadmin.entrypoints=web"
+        
+        - "traefik.http.routers.pgadmin.middlewares=add_root_path@docker"
         
         - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
 
