@@ -1,4 +1,18 @@
+import sys
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+ENV_PATH = Path(__file__).parent
+while ENV_PATH.name != "myriad":
+    if str(ENV_PATH) == str(ENV_PATH.root):
+        ENV_PATH = ".env"
+        break
+
+    ENV_PATH = ENV_PATH.parent
+else:
+    ENV_PATH = ENV_PATH / ".env"
+
 
 class Settings(BaseSettings):
     MODE: str = "DEV"
@@ -20,7 +34,7 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_HOST: str
-    REDIS_AI_DB: str = 1
+    REDIS_AI_DB: str = "1"
     REDIS_PORT: int = 5672
 
     @property
@@ -35,6 +49,10 @@ class Settings(BaseSettings):
     def REDIS_URL(self) -> str:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_AI_DB}"
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=str(ENV_PATH), 
+        env_file_encoding='utf-8',
+        extra="ignore"
+    )
 
 settings = Settings()

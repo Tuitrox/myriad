@@ -1,194 +1,211 @@
-version: '3.8'
+  version: '3.8'
 
-services:
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    restart: always
-    security_opt:
-      - no-new-privileges:true
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./volumes/portainer_data:/data
-    ports:
-      - "9000:9000"
-    networks:
-      - app_network
-
-
-  traefik:
-    image: traefik:v2.11
-    container_name: traefik
-    command:
-      - "--api.insecure=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--accesslog=true"
-      - "--log.level=DEBUG"
-    ports:
-      - "${TRAEFIK_PORT:-90}:80"
-      - "${TRAEFIK_ADMIN_PORT:-8090}:8080"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - app_network
+  services:
+    portainer:
+      image: portainer/portainer-ce:latest
+      container_name: portainer
+      restart: always
+      security_opt:
+        - no-new-privileges:true
+      volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+        - ./volumes/portainer_data:/data
+      ports:
+        - "9000:9000"
+      networks:
+        - app_network
 
 
-  postgres:
-    image: postgres:15-alpine
-    container_name: postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5433:5432"
-    volumes:
-      - ./volumes/postgres:/var/lib/postgresql/data
-    networks:
-      - app_network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+    traefik:
+      image: traefik:v2.11
+      container_name: traefik
+      command:
+        - "--api.insecure=true"
+        - "--providers.docker=true"
+        - "--providers.docker.exposedbydefault=false"
+        - "--entrypoints.web.address=:80"
+        - "--accesslog=true"
+        - "--log.level=DEBUG"
+      ports:
+        - "${TRAEFIK_PORT:-90}:80"
+        - "${TRAEFIK_ADMIN_PORT:-8090}:8080"
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+      networks:
+        - app_network
 
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    volumes:
-      - ./volumes/rabbitmq:/var/lib/rabbitmq
-    networks:
-      - app_network
-    healthcheck:
-      test: rabbitmq-diagnostics -q ping
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.rabbitmq.rule=Host(`localhost`) && PathPrefix(`/rabbitmq`)"
-      - "traefik.http.routers.rabbitmq.entrypoints=web"
+    postgres:
+      image: postgres:15-alpine
+      container_name: postgres
+      ports:
+        - "5433:5432"
+      volumes:
+        - ./volumes/postgres:/var/lib/postgresql/data
+      networks:
+        - app_network
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+      env_file:
+        - .env
+
     
-      - "traefik.http.middlewares.rabbitmq-strip.stripprefix.prefixes=/rabbitmq"
-      - "traefik.http.routers.rabbitmq.middlewares=rabbitmq-strip"
+    adminer:
+      image: adminer
+      container_name: adminer
+      restart: always
+      networks:
+        - app_network
+      depends_on:
+        - postgres
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.adminer.rule=Host(`localhost`) && PathPrefix(`/adminer`)"
+        - "traefik.http.routers.adminer.entrypoints=web"
+        
+        - "traefik.http.middlewares.adminer-strip.stripprefix.prefixes=/adminer"
+        - "traefik.http.routers.adminer.middlewares=adminer-strip"
+        
+        - "traefik.http.services.adminer.loadbalancer.server.port=8080"
+
+
+    rabbitmq:
+      image: rabbitmq:3-management
+      container_name: rabbitmq
+      volumes:
+        - ./volumes/rabbitmq:/var/lib/rabbitmq
+      networks:
+        - app_network
+      healthcheck:
+        test: rabbitmq-diagnostics -q ping
+        interval: 10s
+        timeout: 10s
+        retries: 5
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.rabbitmq.rule=Host(`localhost`) && PathPrefix(`/rabbitmq`)"
+        - "traefik.http.routers.rabbitmq.entrypoints=web"
       
-      - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
-    env_file:
-      - .env
+        - "traefik.http.middlewares.rabbitmq-strip.stripprefix.prefixes=/rabbitmq"
+        - "traefik.http.routers.rabbitmq.middlewares=rabbitmq-strip"
+        
+        - "traefik.http.services.rabbitmq.loadbalancer.server.port=15672"
+      env_file:
+        - .env
 
 
-  redis:
-    image: redis:alpine
-    container_name: redis
-    networks:
-      - app_network
+    redis:
+      image: redis:alpine
+      container_name: redis
+      networks:
+        - app_network
 
 
-  etcd:
-    container_name: milvus-etcd
-    image: quay.io/coreos/etcd:v3.5.0
-    environment:
-      - ETCD_AUTO_COMPACTION_MODE=revision
-      - ETCD_AUTO_COMPACTION_RETENTION=1000
-      - ETCD_QUOTA_BACKEND_BYTES=4294967296
-      - ETCD_SNAPSHOT_COUNT=50000
-    volumes:
-      - ./volumes/etcd:/etcd
-    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls=http://0.0.0.0:2379
-    networks:
-      - app_network
+    etcd:
+      container_name: milvus-etcd
+      image: quay.io/coreos/etcd:v3.5.0
+      environment:
+        - ETCD_AUTO_COMPACTION_MODE=revision
+        - ETCD_AUTO_COMPACTION_RETENTION=1000
+        - ETCD_QUOTA_BACKEND_BYTES=4294967296
+        - ETCD_SNAPSHOT_COUNT=50000
+      volumes:
+        - ./volumes/etcd:/etcd
+      command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls=http://0.0.0.0:2379
+      networks:
+        - app_network
 
 
-  minio:
-    container_name: milvus-minio
-    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
-    environment:
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-    volumes:
-      - ./volumes/minio:/minio_data
-    command: minio server /minio_data
-    networks:
-      - app_network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+    minio:
+      container_name: milvus-minio
+      image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+      environment:
+        MINIO_ACCESS_KEY: minioadmin
+        MINIO_SECRET_KEY: minioadmin
+      volumes:
+        - ./volumes/minio:/minio_data
+      command: minio server /minio_data
+      networks:
+        - app_network
+      healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+        interval: 30s
+        timeout: 20s
+        retries: 3
 
 
-  milvus:
-    container_name: milvus-standalone
-    image: milvusdb/milvus:v2.3.0
-    command: ["milvus", "run", "standalone"]
-    environment:
-      ETCD_ENDPOINTS: milvus-etcd:2379
-      MINIO_ADDRESS: milvus-minio:9000
-    volumes:
-      - ./volumes/milvus:/var/lib/milvus
-    depends_on:
-      - "etcd"
-      - "minio"
-    networks:
-      - app_network
+    milvus:
+      container_name: milvus-standalone
+      image: milvusdb/milvus:v2.3.0
+      command: ["milvus", "run", "standalone"]
+      environment:
+        ETCD_ENDPOINTS: milvus-etcd:2379
+        MINIO_ADDRESS: milvus-minio:9000
+      volumes:
+        - ./volumes/milvus:/var/lib/milvus
+      depends_on:
+        - "etcd"
+        - "minio"
+      networks:
+        - app_network
 
-  
-  core_api:
-    build: ./backend/services/core_api
-    container_name: core_api
-    env_file: .env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.core_api.rule=Host(`localhost`) && (PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/openapi.json`))"
-      - "traefik.http.routers.core_api.entrypoints=web"
-      - "traefik.http.services.core_api.loadbalancer.server.port=80"
-    networks:
-      - app_network
+    
+    core_api:
+      build: ./backend/services/core_api
+      container_name: core_api
+      env_file: .env
+      depends_on:
+        postgres:
+          condition: service_healthy
+        rabbitmq:
+          condition: service_healthy
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.core_api.rule=Host(`localhost`) && (PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/openapi.json`))"
+        - "traefik.http.routers.core_api.entrypoints=web"
+        - "traefik.http.services.core_api.loadbalancer.server.port=80"
+      networks:
+        - app_network
 
-  ai_worker:
-    build: ./backend/services/ai_worker
-    container_name: ai_worker
-    env_file: .env
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      milvus:
-        condition: service_started
-    networks:
-      - app_network
+    ai_worker:
+      build: ./backend/services/ai_worker
+      container_name: ai_worker
+      env_file: .env
+      depends_on:
+        rabbitmq:
+          condition: service_healthy
+        milvus:
+          condition: service_started
+      networks:
+        - app_network
 
-  flower:
-    image: mher/flower:2.0
-    container_name: flower
-    environment:
-      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:${RABBITMQ_PORT}/
-      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST}:${REDIS_PORT}/${REDIS_AI_DB}
+    flower:
+      image: mher/flower:2.0
+      container_name: flower
+      environment:
+        - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:${RABBITMQ_PORT}/
+        - CELERY_RESULT_BACKEND=redis://${REDIS_HOST}:${REDIS_PORT}/${REDIS_AI_DB}
 
-      - FLOWER_URL_PREFIX=flower
-      - FLOWER_BASIC_AUTH=${FLOWER_USER}:${FLOWER_PASSWORD}
-    depends_on:
-      - rabbitmq
-      - redis
-      - ai_worker
-    networks:
-      - app_network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.flower.rule=Host(`localhost`) && PathPrefix(`/flower`)"
-      - "traefik.http.routers.flower.entrypoints=web"
-      - "traefik.http.middlewares.flower-strip.stripprefix.prefixes=flower"
-      - "traefik.http.routers.flower.middlewares=flower-strip"
-      - "traefik.http.services.flower.loadbalancer.server.port=5555"
+        - FLOWER_URL_PREFIX=flower
+        - FLOWER_BASIC_AUTH=${FLOWER_USER}:${FLOWER_PASSWORD}
+      depends_on:
+        - rabbitmq
+        - redis
+        - ai_worker
+      networks:
+        - app_network
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.flower.rule=Host(`localhost`) && PathPrefix(`/flower`)"
+        - "traefik.http.routers.flower.entrypoints=web"
+        - "traefik.http.middlewares.flower-strip.stripprefix.prefixes=flower"
+        - "traefik.http.routers.flower.middlewares=flower-strip"
+        - "traefik.http.services.flower.loadbalancer.server.port=5555"
 
-networks:
-  app_network:
-    driver: bridge
+  networks:
+    app_network:
+      driver: bridge

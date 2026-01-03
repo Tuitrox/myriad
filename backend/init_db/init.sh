@@ -1,0 +1,39 @@
+#!/bin/bash
+set -e
+
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$CORE_DB_USER') THEN
+            CREATE USER $CORE_DB_USER WITH PASSWORD '$CORE_DB_PASS';
+        END IF;
+    END
+    \$\$;
+
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$AI_DB_USER') THEN
+            CREATE USER $AI_DB_USER WITH PASSWORD '$AI_DB_PASS';
+        END IF;
+    END
+    \$\$;
+
+    DO \$\$
+    BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$NOTIFICATION_DB_USER') THEN
+            CREATE USER $NOTIFICATION_DB_USER WITH PASSWORD '$NOTIFICATION_DB_PASS';
+        END IF;
+    END
+    \$\$;
+
+    CREATE SCHEMA IF NOT EXISTS core AUTHORIZATION $CORE_DB_USER;
+    CREATE SCHEMA IF NOT EXISTS ai AUTHORIZATION $AI_DB_USER;
+    CREATE SCHEMA IF NOT EXISTS notification AUTHORIZATION $NOTIFICATION_DB_USER;
+
+    GRANT ALL PRIVILEGES ON SCHEMA core TO $CORE_DB_USER;
+    GRANT ALL PRIVILEGES ON SCHEMA ai TO $AI_DB_USER;
+    GRANT ALL PRIVILEGES ON SCHEMA notification TO $NOTIFICATION_DB_USER;
+
+EOSQL
