@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Myriad Notes"
     
     # PostgreSQL
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
+    POSTGRES_CORE_DB_USER: str
+    POSTGRES_CORE_DB_PASS: str
     POSTGRES_HOST: str
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        return f"postgresql+asyncpg://{self.POSTGRES_CORE_DB_USER}:{self.POSTGRES_CORE_DB_PASS}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     @property
     def RABBITMQ_URL(self) -> str:
