@@ -8,7 +8,7 @@ from src.routers.auth import get_current_user
 router = APIRouter(prefix="/notes", tags=["Notes"])
 
 
-@router.get("/")
+@router.get("")
 async def create_note(user: User = Depends(get_current_user)):
     task_msg = await celery_send_task("src.tasks.do_something", ["my text its realy works! wow"])\
     
