@@ -28,10 +28,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(notes.router, prefix="/api")
-app.include_router(auth.router, prefix="/api")
+app.include_router(notes.router)
+app.include_router(auth.router)
 
 
-@app.get("/api")
+@app.get("/")
 async def main():
     return {"message": "its api"}
