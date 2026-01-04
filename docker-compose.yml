@@ -1,5 +1,3 @@
-  version: '3.8'
-
   services:
     portainer:
       image: portainer/portainer-ce:latest
@@ -65,7 +63,7 @@
         PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
         PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
         
-        SCRIPT_NAME: ${ROOT_PATH}/pgadmin
+        SCRIPT_NAME: /pgadmin
     
       volumes:
         - ./volumes/pgadmin:/var/lib/pgadmin
@@ -73,12 +71,8 @@
         - app_network
       labels:
         - "traefik.enable=true"
-
-        - "traefik.http.middlewares.add_root_path.addprefix.prefix=${ROOT_PATH:-/}"
         - "traefik.http.routers.pgadmin.rule=Host(`${DOMAIN_NAME:-localhost}`) && PathPrefix(`/pgadmin`)"
         - "traefik.http.routers.pgadmin.entrypoints=web"
-        
-        - "traefik.http.routers.pgadmin.middlewares=add_root_path@docker"
         
         - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
 
@@ -167,6 +161,8 @@
     core_api:
       build: ./backend/services/core_api
       container_name: core_api
+      environment:
+        - ROOT_PATH=/api
       env_file: .env
       depends_on:
         postgres:
@@ -175,8 +171,12 @@
           condition: service_healthy
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.core_api.rule=Host(`${DOMAIN_NAME:-localhost}`) && (PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/openapi.json`))"
+        - "traefik.http.routers.core_api.rule=Host(`${DOMAIN_NAME}`) && (PathPrefix(`/api`) || PathPrefix(`/docs`) || PathPrefix(`/openapi.json`))"
         - "traefik.http.routers.core_api.entrypoints=web"
+        
+        # - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
+        # - "traefik.http.routers.core_api.middlewares=api-strip@docker"
+        
         - "traefik.http.services.core_api.loadbalancer.server.port=80"
       networks:
         - app_network
