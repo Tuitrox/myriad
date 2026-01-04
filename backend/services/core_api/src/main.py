@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from src.routers import notes, auth
 from contextlib import asynccontextmanager
@@ -34,4 +34,5 @@ app.include_router(auth.router)
 
 @app.get("/")
 async def main():
+    print(settings.ROOT_PATH)
     return {"message": "its api"}

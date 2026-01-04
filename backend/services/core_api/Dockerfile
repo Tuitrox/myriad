@@ -24,4 +24,4 @@ COPY src/ ./src
 
 COPY . .
 
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD uvicorn src.main:app --host 0.0.0.0 --port 80 --proxy-headers --forwarded-allow-ips '*' --root-path $ROOT_PATH
