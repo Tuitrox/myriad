@@ -19,6 +19,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    allowedHosts: ['myriad.tuitrox.ru', 'localhost'],
     watch: {
       usePolling: true
     }

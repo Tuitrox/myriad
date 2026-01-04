@@ -39,7 +39,7 @@
       container_name: postgres
       command: ["postgres", "-c", "log_connections=on", "-c", "log_disconnections=on", "-c", "log_statement=all"]
       ports:
-        - "${POSTGRES_PORT}:5432"
+        - "${POSTGRES_FORWADED_PORT}:5432"
       volumes:
         - ./volumes/postgres:/var/lib/postgresql/data
 
