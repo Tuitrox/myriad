@@ -51,6 +51,8 @@
         interval: 5s
         timeout: 5s
         retries: 5
+      environment:
+        - POSTGRES_HOST=postgres 
       env_file:
         - .env
 
@@ -163,6 +165,7 @@
       container_name: core_api
       environment:
         - ROOT_PATH=/api
+        - POSTGRES_HOST=postgres 
       env_file: .env
       depends_on:
         postgres:
@@ -192,6 +195,19 @@
           condition: service_healthy
         milvus:
           condition: service_started
+      networks:
+        - app_network
+
+    notification:
+      build: ./backend/services/notification
+      container_name: notification
+      depends_on:
+        postgres:
+          condition: service_healthy
+        rabbitmq:
+          condition: service_healthy
+      restart: always
+      env_file: .env
       networks:
         - app_network
 

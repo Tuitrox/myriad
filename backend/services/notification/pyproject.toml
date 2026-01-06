@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "notification"
+version = "0.1.0"
+description = "Различные уведомляшки"
+authors = ["Tuitrox"]
+package-mode = false
+
+[project]
+name = "notification"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Vadim L",email = "tuitrox@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "aio-pika (>=9.5.8,<10.0.0)",
+    "pydantic-settings (>=2.12.0,<3.0.0)",
+    "fastapi-mail (>=1.6.1,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

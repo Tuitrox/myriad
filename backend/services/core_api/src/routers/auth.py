@@ -3,13 +3,16 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from jose import JWTError, jwt
+from jwt import decode, PyJWTError
 import bcrypt
+from datetime import datetime, timezone
 
 from src.security import create_access_token
 from src.database import get_db
 from src.models import User
 from src.schemas import UserCreate, UserResponse, Token
 from src.config import settings
+from src.rabbit import rabbit
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -58,7 +61,7 @@ async def get_current_user(
     return user
 
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register")
 async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     query = select(User).where(User.email == user_data.email)
     result = await db.execute(query)
@@ -72,14 +75,54 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
 
     new_user = User(
         email=user_data.email,
-        hashed_password=hashed_pw
+        hashed_password=hashed_pw,
+        is_active=False
     )
     
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
+
+    token = create_access_token(data={"sub": new_user.email})
     
-    return new_user
+    message_body = {
+        "type": "email_verification",
+        "email": new_user.email,
+        "token": token
+    }
+    
+    await rabbit.send_task(
+        queue_name="notifications_queue", 
+        message_data=message_body
+    )
+    
+    return {"status": "SUCCESS", "message": "Registration successful, email sending in background"}
+
+
+@router.post("/verify")
+async def verify_email(token: str, db: AsyncSession = Depends(get_db)):
+    try:
+        payload = decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(status_code=400, detail="Invalid token")
+    except PyJWTError:
+        raise HTTPException(status_code=400, detail="Invalid token")
+
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalars().first()
+    
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
+        
+    if user.is_verified:
+        return {"message": "Already verified"}
+    
+    user.is_verified = True
+    user.is_active = True
+    await db.commit()
+    
+    return {"message": "Account verified successfully"}
 
 
 @router.post("/login", response_model=Token)
@@ -91,12 +134,27 @@ async def login_for_access_token(
     result = await db.execute(query)
     user = result.scalars().first()
 
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=400,
+            detail="Пользователь не подтвердил почту."
+        )
+    
+    if not user.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="Пользователь был забанен."
+        )
+
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Неправильный логин или пароль",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    user.last_login = datetime.now(timezone.utc)
+    await db.commit()
 
     access_token = create_access_token(data={"sub": str(user.id)})
     

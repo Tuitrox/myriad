@@ -56,8 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error(err.detail || 'Ошибка регистрации')
       }
 
-      alert('Успешно! Теперь войдите.')
-      router.push('/login')
+      alert('Письмо отправлено!')
       
     } catch (e: any) {
       alert(e.message)

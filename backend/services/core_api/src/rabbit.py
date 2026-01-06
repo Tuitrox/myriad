@@ -25,7 +25,7 @@ class RabbitClient:
             await self.connection.close()
             print("[RabbitMQ] Connection closed")
 
-    async def send_task(self, message_data: dict):
+    async def send_task(self, message_data: dict, queue_name: str = "notes_queue"):
         """Отправка сообщения в очередь"""
         if not self.channel:
             await self.connect()
@@ -38,7 +38,7 @@ class RabbitClient:
 
         await self.channel.default_exchange.publish(
             message,
-            routing_key="notes_queue"
+            routing_key=queue_name
         )
         print(f"[RabbitMQ] Sent: {message_data}")
 

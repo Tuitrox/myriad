@@ -12,6 +12,10 @@ class User(Base):
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    is_verified = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True) 
+    last_login = Column(DateTime(timezone=True), nullable=True)
+
     notes = relationship("Note", back_populates="owner")
 
 
