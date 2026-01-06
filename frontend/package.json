@@ -18,7 +18,8 @@
   "dependencies": {
     "pinia": "^3.0.4",
     "vue": "^3.5.26",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "vue-turnstile": "^1.0.11"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.3",

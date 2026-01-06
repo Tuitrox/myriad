@@ -7,10 +7,10 @@ from jwt import decode, PyJWTError
 import bcrypt
 from datetime import datetime, timezone
 
-from src.security import create_access_token
+from src.security import create_access_token, verify_turnstile
 from src.database import get_db
 from src.models import User
-from src.schemas import UserCreate, UserResponse, Token
+from src.schemas import UserRegisterRequest, UserResponse, Token
 from src.config import settings
 from src.rabbit import rabbit
 
@@ -62,13 +62,18 @@ async def get_current_user(
 
 
 @router.post("/register")
-async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(user_data: UserRegisterRequest, db: AsyncSession = Depends(get_db)):
     query = select(User).where(User.email == user_data.email)
     result = await db.execute(query)
+
+    is_valid = await verify_turnstile(user_data.captcha_token)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="CAPTCHA не пройдена!")
+    
     if result.scalars().first():
         raise HTTPException(
             status_code=400, 
-            detail="Email already registered"
+            detail="Пользователь с таким email уже существует"
         )
 
     hashed_pw = hash_password(user_data.password)
@@ -76,7 +81,8 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     new_user = User(
         email=user_data.email,
         hashed_password=hashed_pw,
-        is_active=False
+        is_active=True,
+        is_verified=False
     )
     
     db.add(new_user)
